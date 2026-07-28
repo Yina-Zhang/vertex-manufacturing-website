@@ -1,4 +1,6 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export type EmailAttachment = {
   filename: string;
@@ -14,60 +16,37 @@ export type EmailPayload = {
 };
 
 /**
- * 使用 SMTP 发送邮件（支持附件）
+ * 使用 Resend API 发送邮件（支持附件）
  */
 export async function sendEmail(payload: EmailPayload): Promise<boolean> {
-  const host = process.env.SMTP_HOST;
-  console.log("[Email Debug] SMTP host:", host);
-  const port = parseInt(process.env.SMTP_PORT || "465", 10);
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  const from = process.env.SMTP_FROM || user;
+  const apiKey = process.env.RESEND_API_KEY;
 
-  if (!host || !user || !pass) {
-    console.error("[Email] SMTP configuration missing (SMTP_HOST, SMTP_USER, SMTP_PASS)");
+  if (!apiKey) {
+    console.error("[Email] RESEND_API_KEY is missing");
     return false;
   }
 
   try {
-  const transporter = nodemailer.createTransport({
-    host: "smtp.share-email.com",
-    port: 465,
-    secure: true,
-    auth: {
-      user,
-      pass,
-    },
-    tls: {
-      servername: "smtp.share-email.com",
-    },
-  });
+    const result = await resend.emails.send({
+      from: "Vertex Advanced Manufacturing <hello@vertexadvancedmanufacturing.com>",
+      to: payload.to,
+      subject: payload.subject,
+      html: payload.content,
+      attachments: payload.attachments?.map((a) => ({
+        filename: a.filename,
+        content: a.content,
+      })),
+    });
 
-  const mailOptions: nodemailer.SendMailOptions = {
-    from,
-    to: payload.to,
-    subject: payload.subject,
-    html: payload.content,
-  };
+    console.log(
+      `[Email] Successfully sent email to ${payload.to}`,
+      result
+    );
 
-  if (payload.attachments && payload.attachments.length > 0) {
-    mailOptions.attachments = payload.attachments.map(a => ({
-      filename: a.filename,
-      content: a.content,
-      contentType: a.contentType,
-    }));
+    return true;
+
+  } catch (error) {
+    console.error("[Email] Error sending email:", error);
+    return false;
   }
-
-  const info = await transporter.sendMail(mailOptions);
-
-  console.log(
-    `[Email] Successfully sent email to ${payload.to}, messageId: ${info.messageId}`
-  );
-
-  return true;
-
-} catch (error) {
-  console.error("[Email] Error sending email:", error);
-  return false;
-}
 }
