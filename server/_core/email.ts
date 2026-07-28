@@ -70,3 +70,4 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
   console.error("[Email] Error sending email:", error);
   return false;
 }
+}
