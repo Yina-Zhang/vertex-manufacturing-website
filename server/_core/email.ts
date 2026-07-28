@@ -18,6 +18,7 @@ export type EmailPayload = {
  */
 export async function sendEmail(payload: EmailPayload): Promise<boolean> {
   const host = process.env.SMTP_HOST;
+  console.log("[Email Debug] SMTP host:", host);
   const port = parseInt(process.env.SMTP_PORT || "465", 10);
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
@@ -30,11 +31,13 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
 
   try {
     const transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure: port === 465, // true for 465, false for other ports
+      host: "172.65.246.140",
+      port: 587,
+      secure: false,// true for 465, false for other ports
       auth: { user, pass },
-      authMethod: "LOGIN", // share-email.com requires LOGIN auth
+      tls: {
+    servername: "smtp.share-email.com",
+     },
     });
 
     const mailOptions: nodemailer.SendMailOptions = {

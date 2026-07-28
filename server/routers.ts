@@ -103,7 +103,7 @@ export const appRouter = router({
           // 这个端点保留用于兼容性，但建议使用 uploadFile 端点
           return {
             presignedUrl: s3Url,
-            storageUrl: `/manus-storage/${storageKey}`,
+            storageUrl: storageUrl,
           };
         } catch (error) {
           console.error("[Contact] Error getting upload URL:", error);
@@ -131,14 +131,13 @@ export const appRouter = router({
         try {
           const uploadedFiles: Array<{ name: string; url: string; cacheKey?: string }> = input.files || [];
 
-          // Build absolute download URLs for each uploaded file
-          // Files are stored in S3 and served via /manus-storage/... proxy
+          // Build download links for uploaded files
+          // Files are stored in Cloudflare R2 and the URL is already a signed download URL.
           // We embed clickable links in the email body instead of attaching binary files
           // to avoid Gmail's 25MB attachment size limit
           const fileLinks = uploadedFiles.map(f => {
-            // url is like /manus-storage/contact-uploads/filename_hash.ext
-            // Make it absolute so it works in email clients
-            const absoluteUrl = `https://vertexadvancedmanufacturing.com${f.url}`;
+            // url is already a complete signed URL for email download
+            const absoluteUrl = f.url;
             return { name: f.name, url: absoluteUrl };
           });
 
@@ -326,8 +325,58 @@ export const appRouter = router({
           `.trim();
 
           // 后台发送邮件，不 await
-          sendEmail({ ...emailPayload, to: "laiqiongjin2@gmail.com" })
-            .catch(err => console.error("[Contact] Background email error:", err));
+sendEmail({ ...emailPayload, to: "hello@vertexadvancedmanufacturing.com" })
+  .catch(err => console.error("[Contact] Background email error:", err));
+
+// 自动回复客户
+sendEmail({
+  to: input.email,
+  subject: "Your project inquiry has been received - Vertex Advanced Manufacturing",
+  content: `
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, Helvetica, sans-serif; color:#333; line-height:1.6;">
+
+<p>Hi ${input.name},</p>
+
+<p>
+Thank you for reaching out to Vertex Advanced Manufacturing.
+</p>
+
+<p>
+We have successfully received your project details and uploaded files.
+</p>
+
+<p>
+Our engineering team will review your requirements, including manufacturability,
+materials, and production options. A dedicated project specialist will follow up
+with you regarding your project and provide feedback as soon as possible,
+usually within 24 hours.
+</p>
+
+<p>
+If you have any additional information, such as CAD files, drawings, material requirements,
+or target quantities, please feel free to reply to this email.
+</p>
+
+<br>
+
+<p>
+Best regards,<br>
+Vertex Advanced Manufacturing Team<br>
+Engineering & Manufacturing Solutions<br>
+<a href="https://vertexadvancedmanufacturing.com">
+vertexadvancedmanufacturing.com
+</a>
+</p>
+
+</body>
+</html>
+  `,
+})
+  .catch(err => console.error("[Contact] Auto reply email error:", err));
+          
+
 
           return {
             success: true,
