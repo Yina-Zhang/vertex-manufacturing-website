@@ -59,57 +59,7 @@ export const appRouter = router({
           throw error;
         }
       }),
-    getUploadUrl: publicProcedure
-      .input(
-        z.object({
-          fileName: z.string().min(1, "File name is required"),
-          fileSize: z.number().positive("File size must be positive"),
-          fileType: z.string(),
-        })
-      )
-      .mutation(async ({ input }) => {
-        try {
-          const forgeUrl = ENV.forgeApiUrl.replace(/\/+$/, "");
-          const forgeKey = ENV.forgeApiKey;
 
-          if (!forgeUrl || !forgeKey) {
-            throw new Error("Storage config missing");
-          }
-
-          // 生成唯一的文件名
-          const hash = crypto.randomUUID().replace(/-/g, "").slice(0, 8);
-          const lastDot = input.fileName.lastIndexOf(".");
-          const storageKey = lastDot === -1
-            ? `contact-uploads/${Date.now()}-${input.fileName}_${hash}`
-            : `contact-uploads/${Date.now()}-${input.fileName.slice(0, lastDot)}_${hash}${input.fileName.slice(lastDot)}`;
-
-          // 获取 presigned PUT URL
-          const presignUrl = new URL("v1/storage/presign/put", forgeUrl + "/");
-          presignUrl.searchParams.set("path", storageKey);
-
-          const presignResp = await fetch(presignUrl, {
-            headers: { Authorization: `Bearer ${forgeKey}` },
-          });
-
-          if (!presignResp.ok) {
-            const msg = await presignResp.text().catch(() => presignResp.statusText);
-            throw new Error(`Storage presign failed (${presignResp.status}): ${msg}`);
-          }
-
-          const { url: s3Url } = (await presignResp.json()) as { url: string };
-          if (!s3Url) throw new Error("Forge returned empty presign URL");
-
-          // 注意：presigned URL 方式已被弃用，改用后端代理上传
-          // 这个端点保留用于兼容性，但建议使用 uploadFile 端点
-          return {
-            presignedUrl: s3Url,
-            storageUrl: storageUrl,
-          };
-        } catch (error) {
-          console.error("[Contact] Error getting upload URL:", error);
-          throw error;
-        }
-      }),
     submit: publicProcedure
       .input(
         z.object({
