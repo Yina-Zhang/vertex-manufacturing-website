@@ -30,37 +30,43 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
   }
 
   try {
-    const transporter = nodemailer.createTransport({
-      host: "172.65.246.140",
-      port: 587,
-      secure: false,// true for 465, false for other ports
-      auth: { user, pass },
-      tls: {
-    servername: "smtp.share-email.com",
-     },
-    });
+  const transporter = nodemailer.createTransport({
+    host: "smtp.share-email.com",
+    port: 465,
+    secure: true,
+    auth: {
+      user,
+      pass,
+    },
+    tls: {
+      servername: "smtp.share-email.com",
+    },
+  });
 
-    const mailOptions: nodemailer.SendMailOptions = {
-      from,
-      to: payload.to,
-      subject: payload.subject,
-      html: payload.content,
-    };
+  const mailOptions: nodemailer.SendMailOptions = {
+    from,
+    to: payload.to,
+    subject: payload.subject,
+    html: payload.content,
+  };
 
-    if (payload.attachments && payload.attachments.length > 0) {
-      mailOptions.attachments = payload.attachments.map(a => ({
-        filename: a.filename,
-        content: a.content,
-        contentType: a.contentType,
-      }));
-    }
-
-    const info = await transporter.sendMail(mailOptions);
-
-    console.log(`[Email] Successfully sent email to ${payload.to}, messageId: ${info.messageId}`);
-    return true;
-  } catch (error) {
-    console.error("[Email] Error sending email:", error);
-    return false;
+  if (payload.attachments && payload.attachments.length > 0) {
+    mailOptions.attachments = payload.attachments.map(a => ({
+      filename: a.filename,
+      content: a.content,
+      contentType: a.contentType,
+    }));
   }
+
+  const info = await transporter.sendMail(mailOptions);
+
+  console.log(
+    `[Email] Successfully sent email to ${payload.to}, messageId: ${info.messageId}`
+  );
+
+  return true;
+
+} catch (error) {
+  console.error("[Email] Error sending email:", error);
+  return false;
 }
